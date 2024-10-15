@@ -13,5 +13,12 @@
  */
 
 return [
-    // ...
+    'db' => [
+        'driver' => 'Pdo_Mysql',
+        'database' => 'sms_email_db',
+        'username' => 'root',
+        'password' => '',
+        'hostname' => 'localhost',
+    ],
+
 ];
