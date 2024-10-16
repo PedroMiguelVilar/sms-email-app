@@ -12,25 +12,50 @@ class SMSController extends AbstractActionController
 {
     public function asyncProcessAction()
     {
-        // Get the number from the POST request
-        $number = $this->params()->fromPost('number', 0); // Accept number from POST
+        // Get the raw POST content and decode the JSON payload
+        $requestContent = $this->getRequest()->getContent();
+        $data = json_decode($requestContent, true); // Decode the JSON payload
 
-        // Run the background process and capture the success state
-        $processStarted = $this->runAsyncTask($number);
+        // Extract numbers from the decoded JSON data
+        $numbers = $data['numbers'] ?? []; // Fallback to an empty array if 'numbers' is not present
 
-        // Return a JSON response based on whether the process started successfully
-        if ($processStarted) {
+        // Check if we have numbers to process
+        if (empty($numbers) || !is_array($numbers)) {
+            return new JsonModel([
+                'status'  => 'error',
+                'message' => 'No numbers provided or invalid format.',
+            ]);
+        }
+
+        $success = true;
+        $failedNumbers = [];
+
+        // Loop through each number and run an async task
+        foreach ($numbers as $number) {
+            $processStarted = $this->runAsyncTask($number);
+
+            // Collect the number if the task failed
+            if (!$processStarted) {
+                $failedNumbers[] = $number;
+                $success = false;
+            }
+        }
+
+        // Return a JSON response based on whether all tasks started successfully
+        if ($success) {
             return new JsonModel([
                 'status'  => 'success',
-                'message' => 'Task is processing in the background.',
+                'message' => 'Tasks are processing in the background for all numbers.',
             ]);
         } else {
             return new JsonModel([
-                'status'  => 'error',
-                'message' => 'Failed to start the background task.',
+                'status'  => 'partial_success',
+                'message' => 'Some tasks failed to start.',
+                'failed_numbers' => $failedNumbers,
             ]);
         }
     }
+
 
     private function runAsyncTask($number): bool
     {
