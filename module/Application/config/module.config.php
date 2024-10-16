@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Application;
 
+use Application\Command\RunTaskCommand;
 use Application\Factory\RecipientControllerFactory;
 use Application\Factory\RecipientTableFactory;
-use Application\Model\RecipientTable;
 use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Segment;
 use Laminas\ServiceManager\Factory\InvokableFactory;
@@ -46,6 +46,32 @@ return [
                     ],
                 ],
             ],
+            'simple' => [
+                'type'    => \Laminas\Router\Http\Literal::class,
+                'options' => [
+                    'route'    => '/simple/async-process',
+                    'defaults' => [
+                        'controller' => Controller\SMSController::class,
+                        'action'     => 'asyncProcess',
+                    ],
+                ],
+                'may_terminate' => true,
+                'child_routes' => [
+                    'post' => [
+                        'type' => 'Segment',
+                        'options' => [
+                            'route' => '/[:action]',
+                            'defaults' => [
+                                'action' => 'asyncProcess',
+                            ],
+                        ],
+                        'constraints' => [
+                            'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                        ],
+                    ],
+                ],
+            ],
+
         ],
     ],
 
@@ -53,6 +79,13 @@ return [
         'factories' => [
             Controller\IndexController::class => InvokableFactory::class,
             Controller\RecipientController::class => RecipientControllerFactory::class,
+            Controller\SMSController::class => InvokableFactory::class,
+        ],
+    ],
+
+    'laminas-cli' => [
+        'commands' => [
+            'run-task' => \Application\Command\RunTaskCommand::class,
         ],
     ],
 
