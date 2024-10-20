@@ -7,6 +7,7 @@ namespace Application\Controller;
 use Laminas\Mvc\Controller\AbstractRestfulController;
 use Laminas\View\Model\JsonModel;
 use Application\Model\RecipientTable;
+use Laminas\Http\Response;
 
 class RecipientController extends AbstractRestfulController
 {
@@ -18,153 +19,112 @@ class RecipientController extends AbstractRestfulController
     }
 
     // GET /recipients - Retrieve all recipients
-    public function getList()
+    public function getList(): Response
     {
         $recipients = $this->recipientTable->fetchAll();
-        return new JsonModel(['data' => $recipients]);
+        return $this->createResponse(['data' => $recipients]);
     }
 
     // GET /recipients/:id - Retrieve a recipient by ID
-    public function get($id)
+    public function get($id): Response
     {
         if (!is_numeric($id)) {
-            return new JsonModel(['error' => 'Invalid ID provided']);
+            return $this->createResponse(['error' => 'Invalid ID provided'], 500);
         }
 
         $recipient = $this->recipientTable->getRecipient($id);
 
         if (!$recipient) {
-            return new JsonModel(['error' => 'Recipient not found']);
+            return $this->createResponse(['error' => 'Recipient not found'], 404);
         }
 
-        return new JsonModel(['data' => $recipient]);
+        return $this->createResponse(['data' => $recipient]);
     }
 
 
     // POST /recipients - Create a new recipient
-    public function create($data)
+    public function create($data): Response
     {
-        // Decode the data
         $request = $this->getRequest();
         $data = json_decode($request->getContent(), true);
 
         if (empty($data)) {
-            return new JsonModel(['error' => 'No data provided']);
+            return $this->createResponse(['error' => 'No data provided [name, phone_number]'], 500);
         }
 
-        // Define required fields
-        $requiredFields = ['name', 'email', 'phone_number'];
+        try {
+            // Save the validated recipient
+            $this->recipientTable->saveRecipient($data);
 
-        // Check for missing fields
-        foreach ($requiredFields as $field) {
-            if (empty(trim($data[$field]))) {
-                return new JsonModel(['error' => "Missing or empty required field: $field"]);
-            }
+            return $this->createResponse(['status' => 'created', 'data' => $data], 201);
+        } catch (\InvalidArgumentException $e) {
+            return $this->createResponse(['error' => $e->getMessage()], 500);
         }
-
-        // Validate email format
-        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            return new JsonModel(['error' => 'Invalid email format']);
-        }
-
-        // Validate phone number
-        $phonePattern = '/^(\+351)?[29][0-9]{8}$/'; // +351 is optional, followed by 9 digits
-        if (!preg_match($phonePattern, $data['phone_number'])) {
-            return new JsonModel(['error' => 'Invalid phone number format']);
-        }
-
-        // Create the recipient
-        $this->recipientTable->saveRecipient($data);
-        return new JsonModel(['status' => 'created', 'data' => $data]);
     }
+
 
 
 
     // PUT /recipients/:id - Update a recipient by ID
-    public function update($id, $data)
+    public function update($id, $data): Response
     {
         if (!is_numeric($id)) {
-            return new JsonModel(['error' => 'Invalid ID provided']);
+            return $this->createResponse(['error' => 'Invalid ID provided'], 500);
         }
 
-        // Decode the data (if you're passing JSON)
         $request = $this->getRequest();
         $data = json_decode($request->getContent(), true);
 
         if (empty($data)) {
-            return new JsonModel(['error' => 'No data provided for update']);
+            return $this->createResponse(['error' => 'No data provided for update'], 500);
         }
 
-        // Check if the recipient with the provided ID exists
         $existingRecord = $this->recipientTable->getRecipient($id);
         if (!$existingRecord) {
-            return new JsonModel(['error' => "Recipient with ID $id not found"]);
+            return $this->createResponse(['error' => "Recipient with ID $id not found"], 404);
         }
 
-        // Define allowed fields for update
-        $allowedFields = ['name', 'email', 'phone_number'];
-        $updateData = [];
+        try {
+            // Add the ID to the data array
+            $data['id'] = $id;
 
-        // Validate provided fields and collect them if valid
-        foreach ($data as $field => $value) {
-            if (!in_array($field, $allowedFields)) {
-                return new JsonModel(['error' => "Field $field is not allowed to be updated"]);
-            }
+            // Let the model handle validation and saving
+            $this->recipientTable->saveRecipient($data);
 
-            // Validate and sanitize name
-            if ($field === 'name') {
-                $trimmedName = trim($value);
-                // Ensure name contains only alphabetic characters
-                if (empty($trimmedName) || !preg_match('/^[a-zA-Z]+$/', $trimmedName)) {
-                    return new JsonModel(['error' => 'Name must contain only letters']);
-                }
-            }
-
-            // Validate email format
-            if ($field === 'email' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                return new JsonModel(['error' => 'Invalid email format']);
-            }
-
-            // Validate phone number 
-            if ($field === 'phone_number') {
-                $phonePattern = '/^(\+351)?[29][0-9]{8}$/'; // +351 is optional, followed by 9 digits
-                if (!preg_match($phonePattern, $value)) {
-                    return new JsonModel(['error' => 'Invalid Portuguese phone number format']);
-                }
-            }
-
-            // Add valid data to the updateData array
-            $updateData[$field] = $value;
+            return $this->createResponse(['status' => 'updated', 'data' => $data], 200);
+        } catch (\InvalidArgumentException $e) {
+            return $this->createResponse(['error' => $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            return $this->createResponse(['error' => $e->getMessage()], 500);
         }
-
-        // If no valid fields are provided, return an error
-        if (empty($updateData)) {
-            return new JsonModel(['error' => 'At least one valid field (name, email, phone_number) must be provided']);
-        }
-
-        // Perform the update
-        $updateData['id'] = $id;
-        $this->recipientTable->saveRecipient($updateData);
-        return new JsonModel(['status' => 'updated', 'data' => $updateData]);
     }
 
 
 
+
     // DELETE /recipients/:id - Delete a recipient by ID
-    public function delete($id)
+    public function delete($id): Response
     {
         if (!is_numeric($id)) {
-            return new JsonModel(['error' => 'Invalid ID provided']);
+            return $this->createResponse(['error' => 'Invalid ID provided'], 500);
         }
 
-        // Check if the recipient with the provided ID exists
         $existingRecord = $this->recipientTable->getRecipient($id);
         if (!$existingRecord) {
-            return new JsonModel(['error' => "Recipient with ID $id not found"]);
+            return $this->createResponse(['error' => "Recipient with ID $id not found"], 404);
         }
 
-        // Perform the deletion
         $this->recipientTable->deleteRecipient($id);
-        return new JsonModel(['status' => 'deleted']);
+        return $this->createResponse(['status' => "User $id deleted"], 200);
+    }
+
+
+    //Create response format
+    private function createResponse($data, int $statusCode = 200): Response
+    {
+        $response = new Response();
+        $response->setStatusCode($statusCode);
+        $response->setContent(json_encode($data));
+        return $response;
     }
 }

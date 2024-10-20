@@ -18,7 +18,8 @@ return [
         'database' => 'sms_email_db',
         'username' => 'root',
         'password' => '',
-        'hostname' => 'localhost',
+        //Change to localhost if not using docker, otherwise leave "laminas-db"
+        'hostname' => 'laminas-db',
     ],
 
 ];
