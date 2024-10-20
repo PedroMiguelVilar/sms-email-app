@@ -7,6 +7,7 @@ namespace Application;
 use Application\Command\RunTaskCommand;
 use Application\Factory\RecipientControllerFactory;
 use Application\Factory\RecipientTableFactory;
+use Application\Service\ActiveMQService;
 use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Segment;
 use Laminas\ServiceManager\Factory\InvokableFactory;
@@ -71,7 +72,26 @@ return [
                     ],
                 ],
             ],
-
+            'activemq-send' => [
+                'type'    => 'Literal',
+                'options' => [
+                    'route'    => '/activemq/send',
+                    'defaults' => [
+                        'controller' => Controller\ActiveMQTestController::class,
+                        'action'     => 'sendMessage',
+                    ],
+                ],
+            ],
+            'activemq-receive' => [
+                'type'    => 'Literal',
+                'options' => [
+                    'route'    => '/activemq/receive',
+                    'defaults' => [
+                        'controller' => Controller\ActiveMQTestController::class,
+                        'action'     => 'receiveMessage',
+                    ],
+                ],
+            ],
         ],
     ],
 
@@ -80,12 +100,17 @@ return [
             Controller\IndexController::class => InvokableFactory::class,
             Controller\RecipientController::class => RecipientControllerFactory::class,
             Controller\SMSController::class => InvokableFactory::class,
+            Controller\ActiveMQTestController::class => function ($container) {
+                $activeMQService = $container->get(ActiveMQService::class);
+                return new Controller\ActiveMQTestController($activeMQService);
+            },
         ],
     ],
 
     'laminas-cli' => [
         'commands' => [
             'run-task' => \Application\Command\RunTaskCommand::class,
+            'app:test-activemq' => \Application\Command\ActiveMQTestCommand::class,
         ],
     ],
 
@@ -93,6 +118,11 @@ return [
     'service_manager' => [
         'factories' => [
             Model\RecipientTable::class => RecipientTableFactory::class,
+            Service\ActiveMQService::class => Factory\ActiveMQServiceFactory::class,
+            Command\ActiveMQTestCommand::class => function ($container) {
+                $activeMQService = $container->get(ActiveMQService::class);
+                return new Command\ActiveMQTestCommand($activeMQService);
+            },
         ],
     ],
 
