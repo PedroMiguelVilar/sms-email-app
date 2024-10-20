@@ -1,7 +1,43 @@
+version: '3.8'
+
 services:
-  laminas:
-    build: .
-    ports:
-     - "8080:80"
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laminas-app
     volumes:
-     - .:/var/www
+      - .:/var/www/html
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      - MYSQL_HOST=laminas-db
+      - MYSQL_DATABASE=sms_email_db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0.30
+    container_name: laminas-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ''
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: sms_email_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:

@@ -1,78 +1,46 @@
-FROM php:8.3-apache
+# Use the official PHP image as a base for building dependencies
+FROM php:8.2-apache as build
 
-LABEL maintainer="getlaminas.org" \
-    org.label-schema.docker.dockerfile="/Dockerfile" \
-    org.label-schema.name="Laminas MVC Skeleton" \
-    org.label-schema.url="https://docs.getlaminas.org/mvc/" \
-    org.label-schema.vcs-url="https://github.com/laminas/laminas-mvc-skeleton"
-
-## Update package information
-RUN apt-get update
-
-## Configure Apache
-RUN a2enmod rewrite \
-    && sed -i 's!/var/www/html!/var/www/public!g' /etc/apache2/sites-available/000-default.conf \
-    && mv /var/www/html /var/www/public
-
-## Install Composer
-RUN curl -sS https://getcomposer.org/installer \
-  | php -- --install-dir=/usr/local/bin --filename=composer
-
-###
-## PHP Extensisons
-###
-
-## Install zip libraries and extension
-RUN apt-get install --yes git zlib1g-dev libzip-dev \
-    && docker-php-ext-install zip
-
-## Install intl library and extension
-RUN apt-get install --yes libicu-dev \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl
-
-###
-## Optional PHP extensions 
-###
-
-## mbstring for i18n string support
-# RUN docker-php-ext-install mbstring
-
-###
-## Some laminas/laminas-db supported PDO extensions
-###
-
-## MySQL PDO support
-# RUN docker-php-ext-install pdo_mysql
-
-## PostgreSQL PDO support
-# RUN apt-get install --yes libpq-dev \
-#     && docker-php-ext-install pdo_pgsql
-
-###
-## laminas/laminas-cache supported extensions
-###
-
-## APCU
-# RUN pecl install apcu \
-#     && docker-php-ext-enable apcu
-
-## Memcached
-# RUN apt-get install --yes libmemcached-dev \
-#     && pecl install memcached \
-#     && docker-php-ext-enable memcached
-
-## MongoDB
-# RUN pecl install mongodb \
-#     && docker-php-ext-enable mongodb
-
-## Redis support.  igbinary and libzstd-dev are only needed based on 
-## redis pecl options
-# RUN pecl install igbinary \
-#     && docker-php-ext-enable igbinary \
-#     && apt-get install --yes libzstd-dev \
-#     && pecl install redis \
-#     && docker-php-ext-enable redis
+# Install required dependencies for PHP and Composer
+# Install dependencies in a single RUN command
+RUN apt-get update && apt-get install -y \
+    libpng-dev libjpeg-dev libfreetype6-dev libzip-dev libicu-dev zip unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo pdo_mysql zip intl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
-WORKDIR /var/www
+# Copy application files
+WORKDIR /app
+COPY . /app
+
+# Install Composer
+COPY --from=composer:2.7.8 /usr/bin/composer /usr/bin/composer
+
+# Run Composer install
+RUN composer install --no-dev --optimize-autoloader
+
+# Production image
+FROM php:8.2-apache
+
+# Install intl and pdo_mysql extensions
+RUN apt-get update && apt-get install -y libicu-dev \
+    && docker-php-ext-install intl pdo_mysql
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
+
+# Set the working directory
+WORKDIR /var/www/html
+
+# Copy Apache configuration file
+COPY ./apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Copy only necessary files from the build stage
+COPY --from=build /app /var/www/html
+
+# Expose port 80
+EXPOSE 80
+
+# Set the default command to run Apache
+CMD ["apache2-foreground"]
