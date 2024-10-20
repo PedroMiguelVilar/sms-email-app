@@ -92,6 +92,16 @@ return [
                     ],
                 ],
             ],
+            'send-bulk-sms' => [
+                'type'    => \Laminas\Router\Http\Literal::class,
+                'options' => [
+                    'route'    => '/activemq/send-bulk-sms',
+                    'defaults' => [
+                        'controller' => Controller\SMSProducerController::class,
+                        'action'     => 'sendBulkSms',
+                    ],
+                ],
+            ],
         ],
     ],
 
@@ -104,6 +114,10 @@ return [
                 $activeMQService = $container->get(ActiveMQService::class);
                 return new Controller\ActiveMQTestController($activeMQService);
             },
+            Controller\SMSProducerController::class => function ($container) {
+                $activeMQService = $container->get(ActiveMQService::class);
+                return new Controller\SMSProducerController($activeMQService);
+            },
         ],
     ],
 
@@ -111,6 +125,7 @@ return [
         'commands' => [
             'run-task' => \Application\Command\RunTaskCommand::class,
             'app:test-activemq' => \Application\Command\ActiveMQTestCommand::class,
+            'app:sms-consumer' => \Application\Command\SMSConsumerCommand::class,
         ],
     ],
 
@@ -122,6 +137,11 @@ return [
             Command\ActiveMQTestCommand::class => function ($container) {
                 $activeMQService = $container->get(ActiveMQService::class);
                 return new Command\ActiveMQTestCommand($activeMQService);
+            },
+            ActiveMQService::class => \Application\Factory\ActiveMQServiceFactory::class,
+            Command\SMSConsumerCommand::class => function ($container) {
+                $activeMQService = $container->get(ActiveMQService::class);
+                return new Command\SMSConsumerCommand($activeMQService);
             },
         ],
     ],
