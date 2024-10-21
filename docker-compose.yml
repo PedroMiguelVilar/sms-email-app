@@ -17,6 +17,7 @@ services:
       - MYSQL_DATABASE=sms_email_db
       - MYSQL_USER=root
       - MYSQL_PASSWORD=
+      - APPLICATION_ENV=production
     networks:
       - app-network
 
