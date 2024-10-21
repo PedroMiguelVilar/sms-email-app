@@ -17,7 +17,6 @@ class RecipientTableFactory implements FactoryInterface
         // Get the DB Adapter from the service manager
         $dbAdapter = $container->get(Adapter::class);
 
-        // Correct the table name to 'recipients'
         $tableGateway = new TableGateway('recipients', $dbAdapter);
 
         // Return the RecipientTable with the injected TableGateway

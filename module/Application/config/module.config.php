@@ -129,7 +129,6 @@ return [
         ],
     ],
 
-    // Register the RecipientTable factory in service_manager, not controllers
     'service_manager' => [
         'factories' => [
             Model\RecipientTable::class => RecipientTableFactory::class,
@@ -162,9 +161,8 @@ return [
             __DIR__ . '/../view',
         ],
 
-        // Ensure this part is added for handling JSON responses
         'strategies' => [
-            'ViewJsonStrategy',  // Add this strategy to handle JSON responses
+            'ViewJsonStrategy',
         ],
     ],
 

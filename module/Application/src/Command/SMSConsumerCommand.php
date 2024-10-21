@@ -30,7 +30,6 @@ class SMSConsumerCommand extends AbstractParamAwareCommand
             $content = $message['content'];
 
             $output->writeln("Sending SMS to $recipient: $content");
-            // Simulate success/failure
             sleep(1);
             $output->writeln("SMS to $recipient sent successfully.");
         });

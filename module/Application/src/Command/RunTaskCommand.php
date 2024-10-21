@@ -33,16 +33,14 @@ class RunTaskCommand extends AbstractParamAwareCommand
         // Log the start of the task
         $this->logToFile("Starting task for number: {$number}");
 
-        // Simulate a long task by sleeping (replace this with real work)
-        sleep(10); // Simulate the delay (you can adjust the sleep duration as needed)
+        // Pretend its doing something
+        sleep(10);
 
-        // Log the completion of the task (you can replace this with actual work)
         $this->logToFile("Completed task for number: {$number}");
 
-        // Write a console message for feedback during execution
         $output->writeln("Task completed for number: {$number}");
 
-        return 0; // 0 means success
+        return 0;
     }
 
     private function logToFile(string $message): void

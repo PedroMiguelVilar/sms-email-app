@@ -18,7 +18,7 @@ return [
         'database' => 'sms_email_db',
         'username' => 'root',
         'password' => '',
-        //Change to localhost if not using docker, otherwise leave "laminas-db"
+        //Change to "localhost" if not using docker, otherwise leave "laminas-db"
         'hostname' => 'laminas-db',
     ],
 
